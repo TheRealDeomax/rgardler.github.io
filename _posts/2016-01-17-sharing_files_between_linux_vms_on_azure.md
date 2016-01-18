@@ -82,7 +82,6 @@ data:        quota: '5120',
 data:        shareUsage: '0'
 data:    }
 info:    storage share create command OK
-
 {% endhighlight %}
 
 # Mount the Share on a Linux VM
@@ -117,7 +116,7 @@ Once you are sure of your File Service endpoint you can mount it on
 your Linux Virtual Machine (note the VM needs to be in the same region
 as the storage account).:
 
-{% endhighlight %}
+{% highlight bash %}
 sudo apt-get install cifs-utils
 sudo mkdir -p /mnt/azure/acstests
 sudo mount -t cifs //acstestfiles.file.core.windows.net/acstestshare /mnt/azure/acstests -o vers=2.1,username=acstestfiles,password=JwFtVAcgbnHvJsk2d/isLsCuqkKJmah+25MdSiS7x2+6YV//A8HyHGktahmr9/uEPfkG9Zkcad8GgZi2Fqw6og==
@@ -127,7 +126,7 @@ sudo mount -t cifs //acstestfiles.file.core.windows.net/acstestshare /mnt/azure/
 
 Now create a file in `/mnt/azure/acstests` and then look to see that it exists from another machine. You can use the portal, another VM on which you have mounted the share or you can use the following commands:
 
-{% endhighlight %}base
+{% highlight bash %}
 azure storage file list -a acstestfiles -k JwFtVAcgbnHvJsk2d/isLsCuqkKJmah+25MdSiS7x2+6YV//A8HyHGktahmr9/uEPfkG9Zkcad8GgZi2Fqw6og== acstestshare
 {% endhighlight %}
 
