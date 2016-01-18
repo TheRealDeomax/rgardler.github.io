@@ -17,26 +17,26 @@ If you already have the Azure CLI then ensure it is the latest version
 you don't yet have the CLI then install node and then run the
 following commands.
 
-```bash
+{% highlight bash %}
 $ sudo npm install -g azure-cli
-```
+{% endhighlight %}
 
 # Login to Azure
 
 We'll be using the Azure Resource Manager to create and manage our
 Files Service, so we need to set the mode and login to Azure:
 
-```bash
+{% highlight bash %}
 azure config mode arm
 azure login
-```
+{% endhighlight %}
 
 # Create a Storage Account
 # Create a File Share
 
 Now that we have a Storage Account we will create a fileshare within it:
 
-```bash
+{% highlight bash %}
 $ azure storage account keys list acstestfiles
 info:    Executing command storage account keys list
 Resource group name: acstestfiles
@@ -59,7 +59,7 @@ data:        shareUsage: '0'
 data:    }
 info:    storage share create command OK
 
-```
+{% endhighlight %}
 
 # Mount the Share on a Linux VM
 
@@ -67,7 +67,7 @@ The endpoint of your Files Service is structured as
 https://[ACCOUNT_NAME].file.core.windows.net/. If in doubt you can
 retrieve it using the CLI as follows:
 
-```bash
+{% highlight bash %}
 $ azure storage account show acstestfiles
 info:    Executing command storage account show
 Resource group name: acstestfiles
@@ -87,23 +87,23 @@ data:    Primary Endpoints: queue https://acstestfiles.queue.core.windows.net/
 data:    Primary Endpoints: table https://acstestfiles.table.core.windows.net/
 data:    Primary Endpoints: file https://acstestfiles.file.core.windows.net/
 info:    storage account show command OK
-```
+{% endhighlight %}
 
 Once you are sure of your File Service endpoint you can mount it on
 your Linux Virtual Machine (note the VM needs to be in the same region
 as the storage account).:
 
-```
+{% endhighlight %}
 sudo apt-get install cifs-utils
 sudo mkdir -p /mnt/azure/acstests
 sudo mount -t cifs //acstestfiles.file.core.windows.net/acstestshare /mnt/azure/acstests -o vers=2.1,username=acstestfiles,password=JwFtVAcgbnHvJsk2d/isLsCuqkKJmah+25MdSiS7x2+6YV//A8HyHGktahmr9/uEPfkG9Zkcad8GgZi2Fqw6og==
-```
+{% endhighlight %}
 
 # Test it's working
 
 Now create a file in `/mnt/azure/acstests` and then look to see that it exists from another machine. You can use the portal, another VM on which you have mounted the share or you can use the following commands:
 
-```base
+{% endhighlight %}base
 azure storage file list -a acstestfiles -k JwFtVAcgbnHvJsk2d/isLsCuqkKJmah+25MdSiS7x2+6YV//A8HyHGktahmr9/uEPfkG9Zkcad8GgZi2Fqw6og== acstestshare
-```
+{% endhighlight %}
 
