@@ -15,7 +15,7 @@ When writing posts it is useful to be able to make edits and see them immedietel
 
     ./script/dev.sh
 
-You will have a server listening on port 4000.
+You will have a server listening on port 80.
 
 # Testing with Docker
 
