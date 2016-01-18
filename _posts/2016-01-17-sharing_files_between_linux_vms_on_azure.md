@@ -130,3 +130,6 @@ Now create a file in `/mnt/azure/acstests` and then look to see that it exists f
 azure storage file list -a acstestfiles -k JwFtVAcgbnHvJsk2d/isLsCuqkKJmah+25MdSiS7x2+6YV//A8HyHGktahmr9/uEPfkG9Zkcad8GgZi2Fqw6og== acstestshare
 {% endhighlight %}
 
+# Further Reading
+
+To learn more about Managing Storage Accounts with the Azure CLI see [Using the Azure CLI with Azure Storage](https://azure.microsoft.com/en-us/documentation/articles/storage-azure-cli/#create-and-manage-file-shares)
