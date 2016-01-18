@@ -1,0 +1,239 @@
+---
+layout: post
+title: Simple Continuous Deliver on Azure Container Service
+tags: [docker, swarm, acs, devops, cd]
+---
+
+Roger is a JavaScript app (the server is built with Node, the client
+with React) that runs in a container and tells Docker to build images,
+at will: you can trigger builds manually or simply setup some hooks so
+that whenever you push Roger is going to trigger a new build. For more
+information see the [Roger announcement
+blog])http://tech.namshi.com/blog/2015/08/08/how-namshi-builds-docker-containers-through-docker-containers/?hootPostID=2bfa3dd581bf1c2fefd306e65d7d4efe&mkt_tok=3RkMMJWWfF9wsRonuqTMZKXonjHpfsX57ewlUa%200lMI%2F0ER3fOvrPUfGjI4ATsZnI%20SLDwEYGJlv6SgFQ7LMMaZq1rgMXBk%3D).
+
+We will deploy roger to an instance of the Azure Container Service
+where it will monitor changes to a number of GitHub repositories and,
+when a change is committed, will build and deploy a new container.
+
+# Create an Azure Container Service Instance
+
+Install the Azure CLI,  ensure it is using Azure Resource Manager mode
+and login to your account:
+
+```bash
+root@cf2d0cd09859:/# azure config mode arm
+info:    New mode is arm
+root@cf2d0cd09859:/# azure login
+info:    Executing command login
+\info:    To sign in, use a web browser to open the page https://aka.ms/devicelogin. Enter the code UNIQUECODE to authenticate. If you're signing in as an Azure AD application, use the --username and --password parameters.
+\info:    Added subscription Microsoft Azure Internal Consumption
+info:    Added subscription Forums Subscription
+info:    Added subscription DTMS Connect 2015 Keynote
+info:    Added subscription VM Depot Main Subscription
+info:    Added subscription Windows Azure Internal Consumption
+info:    Added subscription Microsoft Azure Internal Consumption
+info:    Added subscription CBA Azure Subscription
+info:    Setting subscription "Microsoft Azure Internal Consumption" as default
++
+info:    login command OK
+```
+
+Create `azuredeploy.parameters.json` file such as the one below
+(actually you don't have to create this file, you could provide the
+values interactively, but I like to make everything scriptable and
+reproducible):
+
+```json
+{
+  "dnsNamePrefix": {
+    "value": "rgrogerdemo"
+  },
+  "agentCount": {
+    "value": 3
+  },
+  "masterCount": {
+    "value": 3
+  },
+  "agentVMSize" : {
+    "value": "Standard_A1"
+  },
+  "sshRSAPublicKey": {
+    "value": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8fhkh3jpHUQsrUIezFB5k4Rq9giJM8G1Cr0u2IRMiqG++nat5hbOr3gODpTA0h11q9bzb6nJtK7NtDzIHx+w3YNIVpcTGLiUEsfUbY53IHg7Nl/p3/gkST3g0R6BSL7Hg45SfyvpH7kwY30MoVHG/6P3go4SKlYoHXlgaaNr3fMwUTIeE9ofvyS3fcr6xxlsoB6luKuEs50h0NGsE4QEnbfSY4Yd/C1ucc3mEw+QFXBIsENHfHfZYrLNHm2L8MXYVmAH8k//5sFs4Migln9GiUgEQUT6uOjowsZyXBbXwfT11og+syPkAq4eqjiC76r0w6faVihdBYVoc/UcyupgH azureuser@linuxvm"
+  }
+}
+```
+
+If you are creating the Azure Container Service in a new resource
+group you will need to create that resource group using a commadn such
+as:
+
+```bash
+azure group create GROUP_NAME REGION
+```
+
+Giving results that will look something like this:
+
+```bash
+root@cf2d0cd09859:/# azure group create rgrogerdemo eastus
+info:    Executing command group create
++ Getting resource group rgrogerdemo
++ Creating resource group rgrogerdemo
+info:    Created resource group rgrogerdemo
+data:    Id:                  /subscriptions/325e7c34-99fb-4190-aa87-1df746c67705/resourceGroups/rgrogerdemo
+data:    Name:                rgrogerdemo
+data:    Location:            eastus
+data:    Provisioning State:  Succeeded
+data:    Tags: null
+data:
+info:    group create command OK
+```
+
+Now you can deploy Azure Container Service with the following command:
+
+```bash
+azure group deployment create RESOURCE_GROUP DEPLOYMENT_NAME --template-uri TEMPLATE_URI -e PARAMS_FILE.JSON
+```
+
+If you would rather provide the parameters interactively simply omit `-e PARAMS_FILE.JSON`.
+
+Here's what this looks like in my example (note the location of the
+template will change when the Azure Container Service moves to public
+preview):
+
+```bash
+root@cf2d0cd09859:/# azure group deployment create rgrogerdemo rgrogerdemo --template-uri https://raw.githubuserconten
+t.com/rgardler/azure-quickstart-templates/acs/acs-swarm-full-template/azuredeploy.json -e azuredeploy.paramaters.json
+info:    Executing command group deployment create
++ Initializing template configurations and parameters
++ Creating a deployment
+info:    Created template deployment "rgrogerdemo"
++ Waiting for deployment to complete
+data:    DeploymentName     : rgrogerdemo
+data:    ResourceGroupName  : rgrogerdemo
+data:    ProvisioningState  : Succeeded
+data:    Timestamp          : 2016-01-10T00:11:23.4133621Z
+data:    Mode               : Incremental
+data:    TemplateLink       : https://raw.githubusercontent.com/rgardler/azure-quickstart-templates/acs/acs-swarm-full-template/azuredeploy.json
+data:    ContentVersion     : 1.0.0.0
+data:    Name             Type    Value                                                                              data:    ---------------  ------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+data:    dnsNamePrefix    String  rgrogerdemo                                                                        data:    agentCount       Int     3                                                                                  data:    masterCount      Int     3                                                                                  data:    agentVMSize      String  Standard_A1                                                                        data:    sshRSAPublicKey  String  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8fhkh3jpHUQsrUIezFB5k4Rq9giJM8G1Cr0u2IRMiqG++nat5hbOr3gODpTA0h11q9bzb6nJtK7NtDzIHx+w3YNIVpcTGLiUEsfUbY53IHg7Nl/p3/gkST3g0R6BSL7Hg45SfyvpH7kwY30MoVHG/6P3go4SKlYoHXlgaaNr3fMwUTIeE9ofvyS3fcr6xxlsoB6luKuEs50h0NGsE4QEnbfSY4Yd/C1ucc3mEw+QFXBIsENHfHfZYrLNHm2L8MXYVmAH8k//5sFs4Migln9GiUgEQUT6uOjowsZyXBbXwfT11og+syPkAq4eqjiC76r0w6faVihdBYVoc/UcyupgH azureuser@linuxvm
+data:    Outputs            :
+data:    Name        Type    Value
+data:    ----------  ------  ------------------------------------------------------------------
+data:    masterFQDN  String  rgrogerdemomgmt.eastus.cloudapp.azure.com
+data:    sshMaster0  String  ssh azureuser@rgrogerdemomgmt.eastus.cloudapp.azure.com -A -p 2200
+data:    agentFQDN   String  rgrogerdemoagents.eastus.cloudapp.azure.com
+info:    group deployment create command OK
+```
+
+In the outputs of the above depooyment you can see the SSH connection
+string for Master0. We could SSH into the master and work
+there. However, this is not ideal as we want to do some work with the
+source of the Roger project. We will therefore modify this string a
+little to open a tunnel to the Docker Swarm endpoint. However, before
+you do this you must first check SSH connectivity is working
+correctly. You can do that by running the SSH command given in the
+deployment outputs. Once verified you can open the tunnel with:
+
+```bash
+$ ssh -L 2375:localhost:2375 -N azureuser@rgrogerdemomgmt.eastus.cloudapp.azure.com -A -p 2200 &
+[2] 61990
+```
+
+Now that we have a tunnel open we can connect to the Docker Swarm in the ACS cluster:
+
+```bash
+$ docker -H :2375 ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+$ docker -H :2375 info
+Containers: 3
+Images: 3
+Role: replica
+Primary: 10.0.0.7:2375
+Strategy: spread
+Filters: health, port, dependency, affinity, constraint
+Nodes: 3
+ swarm-agent-42D31F6B-0: 10.0.0.20:2375
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.719 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=3.19.0-41-generic, operatingsystem=Ubuntu 14.04.3 LTS, storagedriver=aufs
+ swarm-agent-42D31F6B-1: 10.0.0.21:2375
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.719 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=3.19.0-41-generic, operatingsystem=Ubuntu 14.04.3 LTS, storagedriver=aufs
+ swarm-agent-42D31F6B-2: 10.0.0.22:2375
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.719 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=3.19.0-41-generic, operatingsystem=Ubuntu 14.04.3 LTS, storagedriver=aufs
+CPUs: 3
+Total Memory: 5.157 GiB
+Name: d6cf38ec762e
+```
+
+In order to prevent the need to type '-H :2375' each time we run a
+Docker command we will set the DOCKER_HOST environemnt variable.
+
+```bash
+export DOCKER_HOST=:2375
+```
+
+Now we are ready to work with our cluster.
+
+# Deploy Roger
+
+At the time of writing Namashi do not publish Roger to Docker Hub,
+they recommend that you build from source. To make things a little easier for you we've built a known working version, however, you might prefer to build your own from the [Roger source](https://github.com/namshi/roger). In the examples below we assume you are using the version we have pushed to Docker Hub.
+
+First of all we need to create a `config.yml` file. This will look something like this:
+
+```yml
+auth:
+  dockerhub: # these credentials are only useful if you need to push to the dockerhub
+    username: user # your username on the dockerhub
+    email:    someone@gmail.com # your...well, you get it
+    password: YOUR_DOCKERHUB_PASSWORD
+  github: YOUR_GITHUB_TOKEN # General token to be used to authenticate to clone any project or comment on PRs https://github.com/settings/tokens/new)
+```
+
+Now you can deploy Roger to ACS:
+
+```bash
+docker run -ti --restart=always -p 80:8080 \
+-v /tmp/logs:/tmp/roger-builds/logs \
+-v $(pwd)/db:/db \
+-v $(pwd)/config.yml:/config.yml \
+-v /var/run/docker.sock:/tmp/docker.sock \
+-e ROGER_CONFIG_auth.dockerhub.username=rgardler \
+-e ROGER_CONFIG_auth.dockerhub.email=ross@gardler.org \
+-e ROGER_CONFIG_auth.dockerhub.password=Granger1 \
+-e ROGER_CONFIG_github=413dbb80292d88754aa20ff04c4fd40371ad4c3a \
+rgardler/roger
+```
+
+# Configuring Roger
+
+## Add a Build File
+
+In your favourite project add a build file.
+
+FIXME: document build file
+
+## Manually build project
+
+To manually build your project call the API as follows:
+
+```
+http://rgrogerdemoagents.eastus.cloudapp.azure.com/api/build?repo=https://github.com/rgardler/AzureDevTestDeploy&branch=roger
+```
+
+## Automatically Build on Changes in GitHub
+
+If you are using GitHub you can set up a webhook that will cause your container to be built every time a commit is pushed. To do this simply set up a webhook that calls:
+
+```
+http://rgrogerdemoagents.eastus.cloudapp.azure.com/public/api/hooks/github
+```
+
