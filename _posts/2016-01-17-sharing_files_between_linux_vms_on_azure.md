@@ -18,7 +18,7 @@ you don't yet have the CLI then install node and then run the
 following commands.
 
 {% highlight bash %}
-$ sudo npm install -g azure-cli
+sudo npm install -g azure-cli
 {% endhighlight %}
 
 # Login to Azure
@@ -32,12 +32,36 @@ azure login
 {% endhighlight %}
 
 # Create a Storage Account
+
+If you don't already have a resource group and storage account you
+will need to create them:
+
+{% highlight bash %}
+azure group create -l "Japan East" acstest
+info:    Executing command group create
++ Getting resource group acsdummy
++ Creating resource group acsdummy
+info:    Created resource group acsdummy
+data:    Id:                  /subscriptions/325e7c34-99fb-4190-aa87-1df746c67705/resourceGroups/acsdummy
+data:    Name:                acsdummy
+data:    Location:            japaneast
+data:    Provisioning State:  Succeeded
+data:    Tags: null
+data:
+info:    group create command OK
+
+azure storage account create --type LRS -l "Japan East" -g acstestfiles acstestfiles
+info:    Executing command storage account create
++ Creating storage account
+info:    storage account create command OK
+{% endhighlight %}
+
 # Create a File Share
 
 Now that we have a Storage Account we will create a fileshare within it:
 
 {% highlight bash %}
-$ azure storage account keys list acstestfiles
+azure storage account keys list acstestfiles
 info:    Executing command storage account keys list
 Resource group name: acstestfiles
 + Getting storage account keys
