@@ -19,7 +19,7 @@ You will have a server listening on port 80.
 
 # Testing with Docker
 
-There is a Dockerfile icluded that makes it easy to test that there
+There is a Dockerfile included that makes it easy to test that there
 are no syntax errors in the site that will prevent it from being
 built. Simply run:
 

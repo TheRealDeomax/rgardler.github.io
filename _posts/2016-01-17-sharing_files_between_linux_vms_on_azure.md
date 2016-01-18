@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Sharing Files Between Linux Hosts on Azure
-tags: [Azure, Linux]
+tags: [azure, linux]
 ---
 
 Azure File Service provides a way to work with files that are common
