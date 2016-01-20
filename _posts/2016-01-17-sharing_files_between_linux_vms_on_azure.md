@@ -37,7 +37,7 @@ If you don't already have a resource group and storage account you
 will need to create them:
 
 {% highlight bash %}
-azure group create -l "Japan East" acstest
+azure group create -l "Japan East" acstestfiles
 info:    Executing command group create
 + Getting resource group acsdummy
 + Creating resource group acsdummy
